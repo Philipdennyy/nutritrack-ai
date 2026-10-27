@@ -1,1 +1,2195 @@
-
+{
+  "name": "nutritrack-ai",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -48,
+        -48
+      ],
+      "id": "e80c2e58-97bf-4289-b677-b707e8fe9c51",
+      "name": "Telegram Trigger",
+      "webhookId": "baff95f4-0ea4-4b6c-adf1-7fcee5b1a6b5",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ JSON.parse($json.candidates[0].content.parts[0].text).reply }}",
+        "additionalFields": {
+          "appendAttribution": "={{ false }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        16
+      ],
+      "id": "050eff0d-a30c-4cf3-b887-288820608208",
+      "name": "Send a text message",
+      "webhookId": "1fed4448-a290-44da-8877-d09840cbe1b4",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "Gemini 3.5 Flash Lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are nutritrack-ai a nutrition tracking assistant.\n\nAnalyze the user's Telegram message and return ONLY valid JSON. Do not include Markdown or code fences.\n\nUse this exact structure:\n\n{\n\"intent\": \"food_log\",\n\"food_items\": [\n{\n\"food_name\": \"egg\",\n\"quantity\": 3,\n\"unit\": \"pieces\",\n\"cooking_method\": \"boiled\",\n\"meal_type\": \"breakfast\",\n\"calories\": 234,\n\"protein_g\": 18.9,\n\"carbs_g\": 1.8,\n\"fat_g\": 15.9,\n\"fibre_g\": 0\n}\n],\n\"reply\": \"Breakfast logged! Three boiled eggs contain approximately 234 calories, 18.9 g of protein, 1.8 g of carbohydrates, 15.9 g of fat, and 0 g of fibre.\"\n}\nMEAL TYPE RULES:\n\n* Only use these four meal types: Breakfast, Lunch, Dinner, Others.\n* If the user explicitly mentions breakfast, use Breakfast.\n* If the user explicitly mentions lunch, use Lunch.\n* If the user explicitly mentions dinner, use Dinner.\n* For snacks, fruits, beverages, protein shakes, and any food where the meal type is not specified, use Others.\n* Never use \"unspecified\", \"snacks\", \"beverages\", or any other meal type.\n* Every food item must have a meal type.\nINTENT CLASSIFICATION — IMPORTANT:\n\n1. Set \"intent\" to \"food_log\" ONLY when the user reports food or drink they have actually consumed and provides enough information to identify at least one food or drink item.\n\n2. Set \"intent\" to \"other\" for greetings such as \"hi\", \"hello\", \"hey\", general questions, fitness questions, workout questions, and messages that do not report consumed food or drink.\n\n3. If the user only mentions a meal name, such as \"lunch\", \"breakfast\", or \"dinner\", without specifying any food or drink, set \"intent\" to \"other\". Do not log anything.\n\n4. If \"intent\" is \"other\", return an empty \"food_items\" array and put an appropriate conversational response in \"reply\".\n\n5. Never classify a greeting or general question as \"food_log\".\n\n6. Return valid JSON only, following the existing output structure.\n\nActual Telegram message:\n{{ $('Telegram Trigger').item.json.message.text }}\n"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        96
+      ],
+      "id": "a19fea15-e1f3-47a2-8ba3-87b314fa0764",
+      "name": "Message a model",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DdBS4f7G7MS3EHYb",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FoodLog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Telegram Chat ID": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+            "Meal Type": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].meal_type }}",
+            "Food Name": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].food_name }}",
+            "Quantity": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].quantity }}",
+            "Unit": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].unit }}",
+            "Cooking Method": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].cooking_method }}",
+            "Calories": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].calories }}",
+            "Protein_g": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].protein_g }}",
+            "Carbs_g": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].carbs_g }}",
+            "Fat_g": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].fat_g }}",
+            "Fibre_g": "={{ JSON.parse($('Message a model').item.json.candidates[0].content.parts[0].text).food_items[0].fibre_g }}",
+            "Log ID": "={{ $execution.id + '-' + $itemIndex }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Log ID",
+              "displayName": "Log ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meal Type",
+              "displayName": "Meal Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Food Name",
+              "displayName": "Food Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quantity",
+              "displayName": "Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cooking Method",
+              "displayName": "Cooking Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Calories",
+              "displayName": "Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Protein_g",
+              "displayName": "Protein_g",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Carbs_g",
+              "displayName": "Carbs_g",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fat_g",
+              "displayName": "Fat_g",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fibre_g",
+              "displayName": "Fibre_g",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "344cc790-c480-44b5-95f8-96f7a31e38b6",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FoodLog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "13d65249-2f7d-4f15-ac11-3c3e8e38a522",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// FITNESS COACH BHEEM\n// Daily Nutrition Calculator\n// ============================================\n\n// Get all food records from Google Sheets\nconst foodLogs = $input.all();\n\n// Get today's date in Indian Standard Time\nconst today = new Date().toLocaleDateString(\"en-CA\", {\n  timeZone: \"Asia/Kolkata\"\n});\n\n// Get the current Telegram user's Chat ID\nconst currentChatId = String(\n  $(\"Telegram Trigger\").first().json.message.chat.id\n);\n\n// Initialize nutrition totals\nlet totalCalories = 0;\nlet totalProtein = 0;\nlet totalCarbs = 0;\nlet totalFat = 0;\nlet totalFibre = 0;\n\n// Process each food record\nfor (const item of foodLogs) {\n  const row = item.json;\n\n  // Filter records by Telegram Chat ID\n  const rowChatId = String(row[\"Telegram Chat ID\"] || \"\");\n\n  if (rowChatId !== currentChatId) {\n    continue;\n  }\n\n  // Skip records without a timestamp\n  const timestamp = row[\"Timestamp\"];\n\n  if (!timestamp) {\n    continue;\n  }\n\n  // Convert timestamp to Indian Standard Time date\n  const foodDate = new Date(timestamp).toLocaleDateString(\"en-CA\", {\n    timeZone: \"Asia/Kolkata\"\n  });\n\n  // Include only today's food records\n  if (foodDate !== today) {\n    continue;\n  }\n\n  // Add nutrition values\n  totalCalories += Number(row[\"Calories\"]) || 0;\n  totalProtein += Number(row[\"Protein_g\"]) || 0;\n  totalCarbs += Number(row[\"Carbs_g\"]) || 0;\n  totalFat += Number(row[\"Fat_g\"]) || 0;\n  totalFibre += Number(row[\"Fibre_g\"]) || 0;\n}\n\n// Round values to two decimal places\ntotalCalories = Math.round(totalCalories * 100) / 100;\ntotalProtein = Math.round(totalProtein * 100) / 100;\ntotalCarbs = Math.round(totalCarbs * 100) / 100;\ntotalFat = Math.round(totalFat * 100) / 100;\ntotalFibre = Math.round(totalFibre * 100) / 100;\n\n// Generate a unique daily summary key\nconst summaryKey = `${today}_${currentChatId}`;\n\n// Return the daily nutrition summary\nreturn [\n  {\n    json: {\n      date: today,\n      telegram_chat_id: currentChatId,\n      total_calories: totalCalories,\n      total_protein_g: totalProtein,\n      total_carbs_g: totalCarbs,\n      total_fat_g: totalFat,\n      total_fibre_g: totalFibre,\n      summary_key: summaryKey\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        0
+      ],
+      "id": "d5110c5b-6f6f-44f0-9864-6467b43e0967",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1495125140,
+          "mode": "list",
+          "cachedResultName": "DailySummary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=1495125140"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.date }}",
+            "Telegram Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Total Calories": "={{ $json.total_calories }}",
+            "Total Protein": "={{ $json.total_protein_g }}",
+            "Total Carbs": "={{ $json.total_carbs_g }}",
+            "Total Fat": "={{ $json.total_fat_g }}",
+            "Total Fibre": "={{ $json.total_fibre_g }}",
+            "Summary Key": "={{ $json.summary_key }}",
+            "Target Calories": "2500",
+            "Target Protein": "130"
+          },
+          "matchingColumns": [
+            "Summary Key"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Calories",
+              "displayName": "Total Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Protein",
+              "displayName": "Total Protein",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Carbs",
+              "displayName": "Total Carbs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Fat",
+              "displayName": "Total Fat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Fibre",
+              "displayName": "Total Fibre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Calories",
+              "displayName": "Target Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Protein",
+              "displayName": "Target Protein",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary Key",
+              "displayName": "Summary Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "5389ac0a-f5ee-4368-87dc-6d82b9ad9c9b",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{\n  '📊 YOUR DAILY NUTRITION PROGRESS\\n\\n' +\n  '🔥 Calories: ' + $json.total_calories + ' / ' + $json['Target Calories'] + ' kcal\\n' +\n  '📉 Calories remaining: ' + Math.max(0, Number($json['Target Calories']) - Number($json.total_calories)) + ' kcal\\n\\n' +\n  '💪 Protein: ' + $json.total_protein_g + ' / ' + $json['Target Protein'] + ' g\\n' +\n  '📉 Protein remaining: ' + Math.max(0, Number($json['Target Protein']) - Number($json.total_protein_g)) + ' g\\n\\n' +\n  '🍚 Carbs: ' + $json.total_carbs_g + ' g\\n' +\n  '🥑 Fat: ' + $json.total_fat_g + ' g\\n' +\n  '🌾 Fibre: ' + $json.total_fibre_g + ' g'\n}}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2144,
+        368
+      ],
+      "id": "93e0f518-2c99-4309-9be3-ebf66916dedd",
+      "name": "Send a text message1",
+      "webhookId": "e2b97cd3-decb-4305-a85b-9b4321fc91d6",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1155792203,
+          "mode": "list",
+          "cachedResultName": "UserSettings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=1155792203"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2144,
+        144
+      ],
+      "id": "1bbf36e3-8871-40cb-b572-2e2aaa0c5999",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+                    "rightValue": "/setup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f0f397d4-95da-4b64-a630-4f9f264ede79"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Setup"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "81fb68ea-8b0b-4af1-bd51-13844f8d19ba",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+                    "rightValue": "/targets",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Targets"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "a4b21e1d-c311-41f5-90bc-e1b3c2dc43a4",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+                    "rightValue": "/logs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "logs"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "60a9a3f0-8e7d-4290-8392-31957c112055",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text.split(' ')[0] }}",
+                    "rightValue": "/delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        208,
+        208
+      ],
+      "id": "fe1e3b93-b082-413c-ac67-77634a226bcf",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "💪 Welcome to nutritrack-ai!  Let's personalize your daily nutrition targets.  🔥 **Step 1 of 2: Daily calorie target**  How many calories do you want to consume each day?  For example, send:  2500  You can change your target whenever your fitness goals change.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        -176
+      ],
+      "id": "70756878-e18a-4dd5-89b3-a2bc4a2628a5",
+      "name": "Send a text message2",
+      "webhookId": "c6777ed8-ca00-46ee-9584-f8a557a9470d",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 437491463,
+          "mode": "list",
+          "cachedResultName": "SetupState",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=437491463"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        -432
+      ],
+      "id": "5426db16-3b93-4bf1-9559-c4d7acec039a",
+      "name": "Check Setup State",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "85901e02-5da6-4997-a9a9-9d39476c1229",
+              "leftValue": "={{ $json[\"Setup Step\"] }}",
+              "rightValue": "awaiting_calories",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "7b78895c-c676-4960-8527-a5723c2a4b6f",
+              "leftValue": "={{ $json[\"Setup Step\"] }}",
+              "rightValue": "awaiting_protein",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        800,
+        -208
+      ],
+      "id": "2aeb687d-c1cc-441d-8afd-a2aeb5c9fb8a",
+      "name": "Is Setup In Progress?"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json[\"Setup Step\"] }}",
+                    "rightValue": "awaiting_calories",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e2374550-f78c-49d3-a0b6-b152aefd58e9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Calories"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "c3f64a7d-c17a-46a6-b9b3-54d376285154",
+                    "leftValue": "={{ $json[\"Setup Step\"] }}",
+                    "rightValue": "awaiting_protein",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Protein"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1008,
+        -288
+      ],
+      "id": "fa5dc6e7-7532-4cb9-ac2c-e61ae6246568",
+      "name": "Route Setup Step"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "8604dd35-c99c-4957-90ca-7bac815a087e",
+              "leftValue": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "1a674572-a0b1-48d0-add5-6d4d18510439",
+              "leftValue": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+              "rightValue": 10000,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1232,
+        -384
+      ],
+      "id": "2edb1b90-acc6-4fba-88c1-e67808bbd2dc",
+      "name": "Validate Calorie Input"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "⚠️ That doesn't look like a valid calorie target.  Please enter a number between 1 and 10,000.  For example: 2500",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        -256
+      ],
+      "id": "2078f74c-e6b6-4186-878a-398138811be3",
+      "name": "Ask for Valid Calories",
+      "webhookId": "10a7b58b-8480-40ff-b638-d67cf52728ed",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 437491463,
+          "mode": "list",
+          "cachedResultName": "SetupState",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=437491463"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Setup Step": "awaiting_protein",
+            "Target Calories": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+            "Updated At": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Telegram Chat ID"
+          ],
+          "schema": [
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Setup Step",
+              "displayName": "Setup Step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Target Calories",
+              "displayName": "Target Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        -512
+      ],
+      "id": "20760008-3893-4220-9f39-782ec9fbd27d",
+      "name": "Save Calorie Target",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=✅ Daily calorie target saved!  💪 Step 2 of 2: Daily protein target  How many grams of protein do you want to consume each day?  For example, send:  130  You can update this target whenever your fitness goals change.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -512
+      ],
+      "id": "fe547fbc-4c8b-41f1-9364-23ac7dabf0ae",
+      "name": "Ask for Protein Target",
+      "webhookId": "a76289fc-ceaa-4a28-aeab-7204495e3730",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "52736295-5789-4bc0-af53-a27605dd7c9a",
+              "leftValue": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "733ea798-26a0-45ec-918d-08edd152f2e8",
+              "leftValue": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+              "rightValue": 500,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1968,
+        -400
+      ],
+      "id": "791d8c95-f69e-4e59-a38a-08e3c9f30193",
+      "name": "Validate Protein Input"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1155792203,
+          "mode": "list",
+          "cachedResultName": "UserSettings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=1155792203"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Target Calories": "={{ $('Check Setup State').first().json['Target Calories'] }}",
+            "Target Protein": "={{ Number($('Telegram Trigger').first().json.message.text) }}",
+            "Updated At": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Telegram Chat ID"
+          ],
+          "schema": [
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Calories",
+              "displayName": "Target Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Target Protein",
+              "displayName": "Target Protein",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2192,
+        -608
+      ],
+      "id": "fa3465f6-f9eb-4ab8-b88c-9c01bbb0831b",
+      "name": "Save User Targets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 437491463,
+          "mode": "list",
+          "cachedResultName": "SetupState",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=437491463"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Setup Step": "completed",
+            "Target Calories": "={{ $('Check Setup State').first().json['Target Calories'] }}",
+            "Updated At": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Telegram Chat ID"
+          ],
+          "schema": [
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Setup Step",
+              "displayName": "Setup Step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Target Calories",
+              "displayName": "Target Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2416,
+        -608
+      ],
+      "id": "17685e41-74f4-4601-b4b9-c9aec0b34156",
+      "name": "Complete Setup",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=🎉 Your nutritrack-ai setup is complete!  🎯 Your daily nutrition targets:  🔥 Calories: {{ $('Save User Targets').first().json['Target Calories'] }} kcal  💪 Protein: {{ $('Save User Targets').first().json['Target Protein'] }} g  From now on, just message me what you eat, and I'll track your nutrition and daily progress.  Example: I ate 3 boiled eggs for breakfast.  You can use /targets whenever you want to review or change your targets.  Let's get stronger! 💪",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2624,
+        -608
+      ],
+      "id": "64f0be39-349e-47f5-981e-da39527249a0",
+      "name": "Confirm Setup Complete",
+      "webhookId": "ee5168dd-a92f-45a9-82aa-2fcaa0b3c774",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=⚠️ Please enter a valid daily protein target between 1 and 500 grams.  For example, send:  130  Your setup is still in progress, so you can try again! 💪",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2224,
+        -416
+      ],
+      "id": "9d2b9d11-1604-4ac9-8b5e-ef92734b8b92",
+      "name": "Ask for Valid Protein",
+      "webhookId": "5f8ff69a-8b8c-4317-a718-7d07b1a75b87",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 437491463,
+          "mode": "list",
+          "cachedResultName": "SetupState",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=437491463"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Setup Step": "awaiting_calories",
+            "Updated At": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Telegram Chat ID"
+          ],
+          "schema": [
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Setup Step",
+              "displayName": "Setup Step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Calories",
+              "displayName": "Target Calories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        272,
+        -208
+      ],
+      "id": "24da8a5c-e45a-41b8-b799-3a326cbe986e",
+      "name": "Start Setup",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=🎯 Your Daily Nutrition Targets  🔥 Daily Calories: {{ $('Get User Targets').first().json['Target Calories'] }} kcal  💪 Daily Protein: {{ $('Get User Targets').first().json['Target Protein'] }} g  Keep tracking your meals to monitor your daily progress!  To configure your targets again, send /setup.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        272
+      ],
+      "id": "1a38769b-1bce-49ea-baf5-3ba3156c3be9",
+      "name": "Show Current Targets",
+      "webhookId": "a7140f0d-0030-4d17-acbb-cd4aa088bc49",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1155792203,
+          "mode": "list",
+          "cachedResultName": "UserSettings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=1155792203"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        256
+      ],
+      "id": "7819042a-1599-41ce-8d59-b902bbf97943",
+      "name": "Get User Targets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1155792203,
+          "mode": "list",
+          "cachedResultName": "UserSettings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=1155792203"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1584,
+        288
+      ],
+      "id": "e725339d-5680-440d-ac80-ab354dda7833",
+      "name": "Get Targets for Daily Summary",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1888,
+        240
+      ],
+      "id": "4cabe424-7310-4e81-9aac-ebd46f1814c1",
+      "name": "Combine Daily Totals and Targets"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "2af41b2c-b647-442c-aa32-1739ec174ef6",
+              "leftValue": "={{ JSON.parse($json.candidates[0].content.parts[0].text).intent }}",
+              "rightValue": "food_log",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1024,
+        304
+      ],
+      "id": "5d089b7a-623f-4c38-be24-709898c1ac1f",
+      "name": "Is Food Log?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ JSON.parse($('Message a model').first().json.candidates[0].content.parts[0].text).reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        416
+      ],
+      "id": "ecf3a6d0-80c3-4ac8-9c61-b8f4b2228577",
+      "name": "Send Normal Reply",
+      "webhookId": "81822c61-6721-4ed5-9c22-7349a0268523",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FoodLog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        496
+      ],
+      "id": "ec20e10f-9ce2-4306-8f3e-d0d9e675f172",
+      "name": "logs sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const foodLogs = $input.all();\n\nfoodLogs.sort((a, b) => {\n  const timeA = new Date(a.json[\"Timestamp\"] || 0).getTime();\n  const timeB = new Date(b.json[\"Timestamp\"] || 0).getTime();\n\n  return timeB - timeA;\n});\n\nconst recentLogs = foodLogs.slice(0, 10);\n\nif (recentLogs.length === 0) {\n  return [\n    {\n      json: {\n        message: \"You haven't logged any food yet. Send me a message about what you ate!\"\n      }\n    }\n  ];\n}\n\nlet message = \"YOUR RECENT FOOD LOGS\\n\\n\";\n\nfor (const item of recentLogs) {\n  const row = item.json;\n\n  message += \"Log ID: \" + (row[\"Log ID\"] || \"Missing\") + \"\\n\";\n  message += \"Date: \" + (row[\"Timestamp\"] || \"Unknown\") + \"\\n\";\n  message += \"Food: \" + (row[\"Food Name\"] || \"Unknown\") + \"\\n\";\n  message += \"Quantity: \" + (row[\"Quantity\"] ?? \"?\") + \" \" + (row[\"Unit\"] || \"\") + \"\\n\";\n  message += \"Calories: \" + (row[\"Calories\"] ?? 0) + \" kcal\\n\";\n  message += \"Protein: \" + (row[\"Protein_g\"] ?? 0) + \" g\\n\";\n  message += \"-------------------------\\n\";\n}\n\nmessage += \"\\nUse the Log ID to identify an entry you want to edit or delete.\";\n\nreturn [\n  {\n    json: {\n      message: message\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        528
+      ],
+      "id": "468c56a8-1649-467c-821d-dc18b137d3ab",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        528
+      ],
+      "id": "dc397ae3-79b2-42b3-966e-834285af31fe",
+      "name": "Send a text message3",
+      "webhookId": "45238d36-a397-4769-97c8-e6553eafadbb",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FoodLog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        720
+      ],
+      "id": "68183cb5-68e1-4d7d-8100-c6315329478e",
+      "name": "Find Food Entry to Delete",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const foodLogs = $input.all();\n\nconst messageText = $('Telegram Trigger').first().json.message.text || '';\nconst chatId = String(\n  $('Telegram Trigger').first().json.message.chat.id\n);\n\n// Extract the Log ID from commands like /delete 58-0\nconst match = messageText.trim().match(/^\\/delete\\s+(\\S+)$/);\n\nif (!match) {\n  return [\n    {\n      json: {\n        valid: false,\n        message: 'Please provide a Log ID.\\nExample: /delete 58-0'\n      }\n    }\n  ];\n}\n\nconst requestedLogId = match[1];\n\n// Find the requested entry among this user's records\nconst matchingEntry = foodLogs.find(item => {\n  return String(item.json['Log ID'] || '') === requestedLogId &&\n         String(item.json['Telegram Chat ID'] || '') === chatId;\n});\n\nif (!matchingEntry) {\n  return [\n    {\n      json: {\n        valid: false,\n        log_id: requestedLogId,\n        message: 'Food entry not found. Please check the Log ID using /logs.'\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      log_id: requestedLogId,\n      chat_id: chatId,\n      food_name: matchingEntry.json['Food Name'],\n      timestamp: matchingEntry.json['Timestamp'],\n      message: 'Found the food entry. Ready for deletion.'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        720
+      ],
+      "id": "50b28104-8a86-4abd-ad42-ec805c158113",
+      "name": "Validate Food Entry for Deletion"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "10396525-bd56-4e6b-9426-c3a13632b71f",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        864,
+        720
+      ],
+      "id": "1a71331f-0ae7-4e61-b054-a50941f7aac8",
+      "name": "Is Food Entry Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo",
+          "mode": "list",
+          "cachedResultName": "Fitness Coach Bheem — Nutrition Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FoodLog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11_n5OQvZ8VLpRMOQe1PR4xnTmp5xgCxYWq1uYlgkwGo/edit#gid=0"
+        },
+        "startIndex": "={{ Number($('Find Food Entry to Delete').all().find(item => String(item.json['Log ID']) === String($('Validate Food Entry for Deletion').first().json.log_id))?.json.row_number) }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1088,
+        624
+      ],
+      "id": "c6ebcf67-e958-499f-b829-891a05a679e6",
+      "name": "Delete Food Log Entry",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eSlQdx8Mp3D2ntY6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Log Successfully Deleted",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        624
+      ],
+      "id": "aa52d4e9-9507-487a-a0a2-778559f55045",
+      "name": "delete confirmation",
+      "webhookId": "d247961b-3a58-4e5e-ae78-369b6148d2a2",
+      "credentials": {
+        "telegramApi": {
+          "id": "WJLMwbbUuCoLi3RH",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Setup State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Is Food Log?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Targets for Daily Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Daily Totals and Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        []
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Start Setup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get User Targets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "logs sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Food Entry to Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message2": {
+      "main": [
+        []
+      ]
+    },
+    "Is Setup In Progress?": {
+      "main": [
+        [
+          {
+            "node": "Route Setup Step",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Setup Step": {
+      "main": [
+        [
+          {
+            "node": "Validate Calorie Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Protein Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Calorie Input": {
+      "main": [
+        [
+          {
+            "node": "Save Calorie Target",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for Valid Calories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for Valid Calories": {
+      "main": [
+        []
+      ]
+    },
+    "Save Calorie Target": {
+      "main": [
+        [
+          {
+            "node": "Ask for Protein Target",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for Protein Target": {
+      "main": [
+        [
+          {
+            "node": "Validate Protein Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Protein Input": {
+      "main": [
+        [
+          {
+            "node": "Save User Targets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for Valid Protein",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save User Targets": {
+      "main": [
+        [
+          {
+            "node": "Complete Setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Setup": {
+      "main": [
+        [
+          {
+            "node": "Confirm Setup Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Setup": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Setup State": {
+      "main": [
+        [
+          {
+            "node": "Is Setup In Progress?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show Current Targets": {
+      "main": [
+        []
+      ]
+    },
+    "Get Targets for Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Combine Daily Totals and Targets",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine Daily Totals and Targets": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Food Log?": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Normal Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logs sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Food Entry to Delete": {
+      "main": [
+        [
+          {
+            "node": "Validate Food Entry for Deletion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Food Entry for Deletion": {
+      "main": [
+        [
+          {
+            "node": "Is Food Entry Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Food Entry Valid?": {
+      "main": [
+        [
+          {
+            "node": "Delete Food Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Delete Food Log Entry": {
+      "main": [
+        [
+          {
+            "node": "delete confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Targets": {
+      "main": [
+        [
+          {
+            "node": "Show Current Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "47d2bbd2-ae38-4d7c-9d1e-7e9f345dd35c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff7736615dd44fad5febeb25a4fdc071f06a358759e6fbadc19b5be312fc7c8a"
+  },
+  "nodeGroups": [],
+  "id": "klwe0taVef7IhuxS",
+  "tags": []
+}
